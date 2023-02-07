@@ -6,12 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDF</title>
 
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.3.122/pdf.min.js"
-      integrity="sha512-CGtesFWoCAxW8xV1S4wdev6uWmGhkEBtTGJsQLkT75ab0eVyx0RTOdGxHk9hFVV/OlF6ZyCoukfPdiZPpAiUtw=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.3.122/build/pdf.min.js"></script>
   </head>
   <body>
     <canvas width="500" height="700">
@@ -48,31 +43,53 @@
 
     <br />
 
-    <div id="adobe-dc-view" style="height: 360px; width: 500px"></div>
+    <canvas id="pre-render"></canvas>
 
-    <script src="https://documentservices.adobe.com/view-sdk/viewer.js"></script>
-    <script type="text/javascript">
-      document.addEventListener("adobe_dc_view_sdk.ready", function () {
-        var adobeDCView = new AdobeDC.View({
-          clientId: "1",
-          divId: "adobe-dc-view",
+    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <script>
+      const url = "./sample1.pdf";
+
+      let pdfDoc = null,
+        pageNum = 1,
+        pageIsRendering = false,
+        pageNumIsPending = null;
+
+      const scale = 1.5,
+        canvas = document.querySelector("#pre-render"),
+        ctx = canvas.getContext("2d");
+
+      // Render
+      const renderPage = (num) => {
+        pageIsRendering = true;
+
+        // Get page
+        pdfDoc.getPage(num).then((page) => {
+          // Set scale
+          console.log(page);
+          const viewport = page.getViewport({ scale });
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          const renderContext = {
+            canvasContext: ctx,
+            viewport,
+          };
+
+          page.render(renderContext).promise.then(() => {
+            pageIsRendering = false;
+
+            if (pageNumIsPending !== null) {
+              renderPage(pageNumIsPending);
+              pageNumIsPending = null;
+            }
+          });
         });
-        adobeDCView.previewFile(
-          {
-            content: {
-              location: {
-                url: "https://documentservices.adobe.com/view-sdk-demo/PDFs/Bodea Brochure.pdf",
-              },
-            },
-            metaData: { fileName: "Bodea Brochure.pdf" },
-          },
-          {
-            embedMode: "FULL_WINDOW",
-            defaultViewMode: "FIT_PAGE",
-            showAnnotationTools: true,
-            showDownloadPDF: true,
-          }
-        );
+      };
+
+      // Get Doc
+      pdfjsLib.getDocument(url).promise.then((pdfDoc_) => {
+        pdfDoc = pdfDoc_;
+        renderPage(pageNum);
       });
     </script>
   </body>
